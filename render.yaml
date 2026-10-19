@@ -1,13 +1,17 @@
 services:
   - type: web
     name: ai-mock-paper-generator
-    env: python
-    region: oregon
+    runtime: python
     plan: free
+    region: oregon
+    autoDeploy: true
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
     envVars:
-      - key: GEMINI_API_KEY
-        sync: false
       - key: PYTHON_VERSION
         value: 3.11.9
+      - key: ENVIRONMENT
+        value: production
+      - key: GEMINI_API_KEY
+        sync: false
