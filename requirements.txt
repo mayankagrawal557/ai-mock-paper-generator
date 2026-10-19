@@ -1,0 +1,25 @@
+fastapi>=0.111.0
+uvicorn[standard]>=0.30.0
+pydantic>=2.7.0
+jinja2>=3.1.4
+python-multipart>=0.0.9
+python-dotenv>=1.0.1
+pypdf>=4.2.0
+
+# Task Queue & Broker
+celery>=5.4.0
+redis>=5.0.0
+
+# Rate Limiting & Security
+slowapi>=0.1.9
+
+# Core AI & LangChain
+langchain>=0.2.0
+langchain-core>=0.2.0
+langchain-community>=0.2.0
+langchain-google-genai>=1.0.6
+google-genai>=1.0.0
+
+# Production Vector Database (Qdrant)
+qdrant-client>=1.9.0
+langchain-qdrant>=0.1.0

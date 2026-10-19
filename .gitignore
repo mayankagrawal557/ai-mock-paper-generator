@@ -1,0 +1,54 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+.venv
+venv/
+ENV/
+
+# Environment Variables & Keys
+.env
+.env.local
+
+# Local ChromaDB persistent storage (if ever persisted)
+chroma_db/
+*.sqlite3
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Staging & Datasets
+staging/
+.mock_paper_staging/
+data/
+train.jsonl
+val.jsonl

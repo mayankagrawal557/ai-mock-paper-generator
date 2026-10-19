@@ -1,0 +1,77 @@
+version: "3.8"
+
+services:
+  # 1. FastAPI Web Server & API Gateway
+  web:
+    build: .
+    container_name: mock_paper_web
+    restart: unless-stopped
+    command: uvicorn app:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - REDIS_URL=redis://redis:6379/0
+      - QDRANT_URL=http://qdrant:6333
+      - STAGING_DIR=/app/staging
+      - CELERY_CONCURRENCY=4
+    volumes:
+      - shared_staging:/app/staging
+    depends_on:
+      redis:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+
+  # 2. Celery Worker (Background PDF Processing & Gemini RAG)
+  worker:
+    build: .
+    container_name: mock_paper_worker
+    restart: unless-stopped
+    command: celery -A celery_worker.celery_app worker --loglevel=info --concurrency=4
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - REDIS_URL=redis://redis:6379/0
+      - QDRANT_URL=http://qdrant:6333
+      - STAGING_DIR=/app/staging
+    volumes:
+      - shared_staging:/app/staging
+    depends_on:
+      redis:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+
+  # 3. Redis Message Broker & State Store
+  redis:
+    image: redis:7-alpine
+    container_name: mock_paper_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # 4. Qdrant Production Vector Search Database
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: mock_paper_qdrant
+    restart: unless-stopped
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+
+volumes:
+  shared_staging:
+    driver: local
+  redis_data:
+    driver: local
+  qdrant_data:
+    driver: local
