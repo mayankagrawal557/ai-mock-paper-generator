@@ -1,3 +1,5 @@
+--extra-index-url https://download.pytorch.org/whl/cpu
+
 fastapi>=0.111.0
 uvicorn[standard]>=0.30.0
 pydantic>=2.7.0
@@ -24,6 +26,5 @@ google-genai>=1.0.0
 qdrant-client>=1.9.0
 langchain-qdrant>=0.1.0
 
-# Advanced RAG: Cross-Encoder Re-Ranking
+# Advanced RAG: Cross-Encoder Re-Ranking (CPU-optimized for cloud deployment)
 sentence-transformers>=3.0.0
-
