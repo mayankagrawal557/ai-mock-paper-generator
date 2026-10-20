@@ -80,7 +80,8 @@ def execute_in_memory_task(
     duration_minutes: int,
     difficulty: str,
     include_solutions: bool,
-    model_name: str
+    model_name: str,
+    blooms_ratio: Optional[dict[str, int]] = None
 ):
     """Fallback async worker when running on standalone hosts without Redis."""
     from ai_engine import run_rag_pipeline
@@ -119,6 +120,7 @@ def execute_in_memory_task(
             difficulty=difficulty,
             include_solutions=include_solutions,
             model_name=model_name,
+            blooms_ratio=blooms_ratio,
             progress_callback=progress_callback
         )
         IN_MEMORY_JOBS[task_id] = {
@@ -196,7 +198,10 @@ async def submit_paper_generation_job(
     duration_minutes: int = Form(180),
     difficulty: str = Form("Medium"),
     include_solutions: bool = Form(True),
-    model_name: str = Form("gemini-3.5-flash")
+    model_name: str = Form("gemini-3.5-flash"),
+    blooms_knowledge: int = Form(30),
+    blooms_application: int = Form(40),
+    blooms_analysis: int = Form(30)
 ):
     """
     Asynchronously accept PDFs, enforce security checks, stage files,
@@ -267,6 +272,12 @@ async def submit_paper_generation_job(
             shutil.rmtree(task_dir, ignore_errors=True)
         raise e
 
+    blooms_dict = {
+        "knowledge": blooms_knowledge,
+        "application": blooms_application,
+        "analysis": blooms_analysis
+    }
+
     # 5. Dispatch async background task (Celery or In-Memory fallback)
     try:
         celery_app.connection().connect()
@@ -280,7 +291,8 @@ async def submit_paper_generation_job(
                 "duration_minutes": duration_minutes if duration_minutes > 0 else 180,
                 "difficulty": difficulty,
                 "include_solutions": include_solutions,
-                "model_name": model_name
+                "model_name": model_name,
+                "blooms_ratio": blooms_dict
             },
             task_id=task_id
         )
@@ -306,7 +318,8 @@ async def submit_paper_generation_job(
                 duration_minutes if duration_minutes > 0 else 180,
                 difficulty,
                 include_solutions,
-                model_name
+                model_name,
+                blooms_dict
             ),
             daemon=True
         )

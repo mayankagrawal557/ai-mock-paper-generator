@@ -44,7 +44,8 @@ def generate_mock_paper_task(
     duration_minutes: int,
     difficulty: str,
     include_solutions: bool,
-    model_name: str
+    model_name: str,
+    blooms_ratio: dict = None
 ) -> Dict[str, Any]:
     """
     Background worker task to execute RAG paper generation without blocking FastAPI.
@@ -95,6 +96,7 @@ def generate_mock_paper_task(
             difficulty=difficulty,
             include_solutions=include_solutions,
             model_name=model_name,
+            blooms_ratio=blooms_ratio,
             progress_callback=progress_reporter
         )
 

@@ -30,6 +30,15 @@
   <!-- Marked.js for Markdown rendering -->
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
+  <!-- KaTeX for Scientific & Mathematical LaTeX Rendering -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+
+  <!-- Mermaid.js for Diagram Rendering -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script>mermaid.initialize({ startOnLoad: false, theme: 'neutral' });</script>
+
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
 
@@ -298,6 +307,64 @@
             </div>
           </div>
 
+          <!-- Bloom's Taxonomy Cognitive Ratio & Presets -->
+          <div class="p-3.5 bg-slate-50/80 rounded-xl border border-slate-200 space-y-3">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-1.5">
+                <i data-lucide="brain" class="w-4 h-4 text-indigo-600"></i>
+                <label class="text-xs font-bold uppercase tracking-wider text-slate-800">
+                  Bloom's Taxonomy Balance
+                </label>
+              </div>
+              <span id="bloomsTotalBadge" class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                Total: 100%
+              </span>
+            </div>
+
+            <!-- Quick Presets -->
+            <div class="grid grid-cols-3 gap-1.5 text-[11px]">
+              <button type="button" onclick="setBloomsPreset(30, 40, 30)" class="px-2 py-1 rounded bg-white hover:bg-slate-100 border border-slate-200 font-medium text-slate-700 transition">
+                Balanced (30/40/30)
+              </button>
+              <button type="button" onclick="setBloomsPreset(20, 50, 30)" class="px-2 py-1 rounded bg-white hover:bg-slate-100 border border-slate-200 font-medium text-slate-700 transition">
+                Engineering (20/50/30)
+              </button>
+              <button type="button" onclick="setBloomsPreset(60, 30, 10)" class="px-2 py-1 rounded bg-white hover:bg-slate-100 border border-slate-200 font-medium text-slate-700 transition">
+                Foundational (60/30/10)
+              </button>
+            </div>
+
+            <!-- Sliders -->
+            <div class="space-y-2 pt-1 text-xs">
+              <div>
+                <div class="flex justify-between text-slate-600 mb-0.5 font-medium">
+                  <span>1. Knowledge / Recall:</span>
+                  <span id="valKnowledge" class="font-bold text-slate-800">30%</span>
+                </div>
+                <input type="range" id="bloomsKnowledge" min="0" max="100" step="5" value="30" oninput="updateBloomsSliders('knowledge')"
+                  class="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-sky-600">
+              </div>
+
+              <div>
+                <div class="flex justify-between text-slate-600 mb-0.5 font-medium">
+                  <span>2. Application & Numericals:</span>
+                  <span id="valApplication" class="font-bold text-slate-800">40%</span>
+                </div>
+                <input type="range" id="bloomsApplication" min="0" max="100" step="5" value="40" oninput="updateBloomsSliders('application')"
+                  class="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600">
+              </div>
+
+              <div>
+                <div class="flex justify-between text-slate-600 mb-0.5 font-medium">
+                  <span>3. Analytical & Case Study:</span>
+                  <span id="valAnalysis" class="font-bold text-slate-800">30%</span>
+                </div>
+                <input type="range" id="bloomsAnalysis" min="0" max="100" step="5" value="30" oninput="updateBloomsSliders('analysis')"
+                  class="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-purple-600">
+              </div>
+            </div>
+          </div>
+
           <!-- File Upload 1: Syllabus PDF -->
           <div>
             <div class="flex items-center justify-between mb-1">
@@ -546,6 +613,33 @@
     let selectedPyqFiles = [];
     let rawGeneratedMarkdown = "";
 
+    // Bloom's Taxonomy Cognitive Controls
+    function updateBloomsSliders(changed) {
+      const k = parseInt(document.getElementById('bloomsKnowledge').value) || 0;
+      const ap = parseInt(document.getElementById('bloomsApplication').value) || 0;
+      const an = parseInt(document.getElementById('bloomsAnalysis').value) || 0;
+
+      document.getElementById('valKnowledge').textContent = `${k}%`;
+      document.getElementById('valApplication').textContent = `${ap}%`;
+      document.getElementById('valAnalysis').textContent = `${an}%`;
+
+      const total = k + ap + an;
+      const badge = document.getElementById('bloomsTotalBadge');
+      badge.textContent = `Total: ${total}%`;
+      if (total === 100) {
+        badge.className = "text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800";
+      } else {
+        badge.className = "text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800";
+      }
+    }
+
+    function setBloomsPreset(k, ap, an) {
+      document.getElementById('bloomsKnowledge').value = k;
+      document.getElementById('bloomsApplication').value = ap;
+      document.getElementById('bloomsAnalysis').value = an;
+      updateBloomsSliders('preset');
+    }
+
     // Handle File Picking
     function handleFileSelect(event, listContainerId) {
       const files = Array.from(event.target.files);
@@ -671,6 +765,11 @@
         formData.append('include_solutions', document.getElementById('includeSolutions').checked);
         formData.append('model_name', document.getElementById('modelName').value);
 
+        // Cognitive Sliders (Bloom's Taxonomy)
+        formData.append('blooms_knowledge', document.getElementById('bloomsKnowledge').value);
+        formData.append('blooms_application', document.getElementById('bloomsApplication').value);
+        formData.append('blooms_analysis', document.getElementById('bloomsAnalysis').value);
+
         stageTitle.textContent = "Dispatching Job to Queue...";
         stageDesc.textContent = "Enforcing PDF security checks and queuing background Celery task...";
 
@@ -745,6 +844,28 @@
 
               // Render Markdown into HTML
               document.getElementById('paperContent').innerHTML = marked.parse(data.paper_markdown);
+
+              // Auto-render KaTeX LaTeX Math Formulas
+              if (window.renderMathInElement) {
+                renderMathInElement(document.getElementById('paperContent'), {
+                  delimiters: [
+                    {left: '$$', right: '$$', display: true},
+                    {left: '$', right: '$', display: false},
+                    {left: '\\(', right: '\\)', display: false},
+                    {left: '\\[', right: '\\]', display: true}
+                  ],
+                  throwOnError: false
+                });
+              }
+
+              // Render Mermaid Visual Diagrams if present
+              if (window.mermaid) {
+                try {
+                  mermaid.run({ nodes: document.querySelectorAll('#paperContent pre code.language-mermaid') });
+                } catch (mErr) {
+                  console.warn("Mermaid diagram rendering notice:", mErr);
+                }
+              }
               
               // Update meta badges
               document.getElementById('badgeTotalMarks').textContent = `${data.total_marks} Marks`;

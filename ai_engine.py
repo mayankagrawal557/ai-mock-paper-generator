@@ -343,7 +343,8 @@ def generate_structured_mock_paper(
     difficulty: str,
     include_solutions: bool,
     model_name: str,
-    api_key: str
+    api_key: str,
+    blooms_ratio: Optional[dict[str, int]] = None
 ) -> MockTestPaper:
     """
     Executes LangChain Chain:
@@ -351,6 +352,19 @@ def generate_structured_mock_paper(
     """
     valid_models = ["gemini-3.5-flash", "gemini-3.8-flash", "gemini-flash-latest"]
     chosen_model = model_name if model_name in valid_models else "gemini-3.5-flash"
+
+    blooms_spec = ""
+    if blooms_ratio:
+        k = blooms_ratio.get("knowledge", 30)
+        ap = blooms_ratio.get("application", 40)
+        an = blooms_ratio.get("analysis", 30)
+        blooms_spec = f"""
+### COGNITIVE DEPTH ENFORCEMENT (BLOOM'S TAXONOMY RATIO):
+- Recall & Definitions (Knowledge): ~{k}% of total marks
+- Problem Solving, Numericals & Algorithms (Application): ~{ap}% of total marks
+- Critical Analysis, Architecture Design & Proofs (Analysis/Evaluation): ~{an}% of total marks
+Ensure the distribution of questions strictly aligns with this cognitive weightage.
+"""
 
     prompt_content = f"""You are a distinguished University Examination Board Chair and Master Paper Setter.
 Your task is to generate an authentic, error-free, and strictly structured Mock Examination Paper.
@@ -371,7 +385,13 @@ Replicate the section layout, marks distribution, question phrasing, and Bloom d
 - Course Title: {exam_name}
 - Total Marks: {total_marks}
 - Duration: {duration_minutes} Minutes
-- Target Difficulty: {difficulty} (~40% Easy/Foundational, ~40% Moderate/Application, ~20% Analytical/Complex)
+- Target Difficulty: {difficulty}
+{blooms_spec}
+
+---
+### MATHEMATICAL NOTATION & DIAGRAM GUIDELINES:
+1. LaTeX Notation: Use standard LaTeX notation (enclosed in `$` for inline math and `$$` for block math) for all mathematical expressions, calculus, algorithmic complexities (e.g. $\\mathcal{{O}}(n \\log n)$), electrical matrices, or chemistry formulas.
+2. Visual Diagrams: When questions involve finite automata, circuit graphs, UML models, or network topologies, generate clean Mermaid diagram blocks (```mermaid ... ```) directly in the question text.
 
 ---
 ### FEW-SHOT REFERENCE SCHEMA (EXACT JSON SCHEMA EXPECTED):
@@ -491,6 +511,7 @@ def run_rag_pipeline(
     difficulty: str = "Medium",
     include_solutions: bool = True,
     model_name: str = "gemini-3.5-flash",
+    blooms_ratio: Optional[dict[str, int]] = None,
     progress_callback=None
 ) -> Dict[str, Any]:
     api_key = get_gemini_api_key()
@@ -523,7 +544,8 @@ def run_rag_pipeline(
             difficulty=difficulty,
             include_solutions=include_solutions,
             model_name=model_name,
-            api_key=api_key
+            api_key=api_key,
+            blooms_ratio=blooms_ratio
         )
 
         if progress_callback:

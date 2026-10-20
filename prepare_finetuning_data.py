@@ -152,6 +152,31 @@ Generate an authentic mock examination question set with marking distribution an
 - **Q4**: Architectural diagram (5 marks), Algorithmic solution (10 marks), Complexity proof (5 marks).
 """
 
+    # Imperfect / Rejected target simulation for contrastive DPO tuning
+    negative_rejected_output = f"""# {course_name} - Exam
+Max Marks: 50
+
+Section A:
+1. Explain everything you know about quantum computing and blockchain applications in {course_name}. [10 Marks]
+2. Define basic terms. [5 Marks]
+
+Section B:
+3. Solve this problem using methods not in your syllabus. [15 Marks]
+
+Section C:
+4. Case study. [25 Marks]
+
+Marking Scheme:
+Give marks if answers look generally correct.
+"""
+
+    if format_type == "dpo":
+        return {
+            "prompt": f"{system_prompt}\n\n{user_prompt}",
+            "chosen": target_output,
+            "rejected": negative_rejected_output
+        }
+
     if format_type == "text":
         return {
             "input_text": f"{system_prompt}\n\n{user_prompt}",
@@ -174,7 +199,7 @@ def main():
     parser.add_argument("--output", type=str, default="train.jsonl", help="Output train JSONL filename")
     parser.add_argument("--val-output", type=str, default="val.jsonl", help="Output validation JSONL filename")
     parser.add_argument("--split-ratio", type=float, default=0.85, help="Train/Validation split ratio (0.0 to 1.0)")
-    parser.add_argument("--format", type=str, choices=["messages", "text"], default="messages", help="Dataset format")
+    parser.add_argument("--format", type=str, choices=["messages", "text", "dpo"], default="messages", help="Dataset format (messages, text, or dpo)")
 
     args = parser.parse_args()
 
