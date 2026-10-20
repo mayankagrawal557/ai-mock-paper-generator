@@ -158,7 +158,7 @@
         </div>
         <div>
           <h1 class="text-lg font-bold text-slate-900 tracking-tight leading-none">AI Mock Paper Generator</h1>
-          <p class="text-xs text-slate-500 font-medium">RAG Architecture &bull; LangChain &bull; ChromaDB &bull; Gemini</p>
+          <p class="text-xs text-slate-500 font-medium">Enterprise RAG &bull; Qdrant &bull; Cross-Encoder Re-Ranking &bull; Gemini</p>
         </div>
       </div>
 
@@ -189,8 +189,8 @@
       </h2>
       <p class="mt-2 text-slate-600 max-w-3xl text-sm sm:text-base leading-relaxed">
         Upload your official course syllabus alongside previous years' question papers (PYQs). 
-        Our local ChromaDB vector store cross-references core syllabus learning objectives with past exam difficulty, 
-        section structures, and question archetypes to generate an original, exam-ready paper.
+        Our high-performance Qdrant vector database and Cross-Encoder Re-Ranker cross-reference core syllabus boundaries with past exam difficulty, 
+        section blueprints, and question archetypes to synthesize an original, mathematically audited mock exam.
       </p>
     </div>
 
@@ -475,29 +475,32 @@
 
     <!-- About / Architecture Section -->
     <section id="about-section" class="mt-16 pt-10 border-t border-slate-200 no-print">
-      <h3 class="text-lg font-bold text-slate-900 mb-2">How the RAG Architecture Works</h3>
-      <p class="text-sm text-slate-600 mb-6">
-        This application combines semantic vector search and Google Gemini to construct reliable mock exams:
+      <div class="flex items-center space-x-2 mb-2">
+        <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-brand-100 text-brand-800 uppercase tracking-wide">Advanced RAG Architecture</span>
+      </div>
+      <h3 class="text-xl font-bold text-slate-900 mb-2">How the Two-Stage Re-Ranking & Generation Pipeline Works</h3>
+      <p class="text-sm text-slate-600 mb-6 max-w-3xl">
+        Standard RAG systems pollute context windows by dumping hundreds of noisy chunks into LLMs. Our pipeline applies dense vector retrieval, cross-attention re-ranking, and mathematical verification:
       </p>
 
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
         <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
           <div class="w-8 h-8 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center mb-3">
-            <i data-lucide="file-text" class="w-4 h-4"></i>
+            <i data-lucide="database" class="w-4 h-4"></i>
           </div>
-          <h4 class="font-bold text-slate-800 mb-1">1. PDF Chunking & Ingestion</h4>
+          <h4 class="font-bold text-slate-800 mb-1">1. Qdrant Vector Search</h4>
           <p class="text-xs text-slate-500 leading-relaxed">
-            Extracts textual content with <code class="font-mono text-slate-700">pypdf</code>, splitting documents into chunked windows with overlapping contexts while tagging their origin as syllabus or PYQ.
+            Extracts PDFs with <code class="font-mono text-slate-700">pypdf</code>, chunks text with overlapping windows, and embeds using Google's <code class="font-mono text-slate-700">gemini-embedding-001</code> into isolated Qdrant vector collections.
           </p>
         </div>
 
         <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
           <div class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center mb-3">
-            <i data-lucide="database" class="w-4 h-4"></i>
+            <i data-lucide="filter" class="w-4 h-4"></i>
           </div>
-          <h4 class="font-bold text-slate-800 mb-1">2. Local ChromaDB Embedding</h4>
+          <h4 class="font-bold text-slate-800 mb-1">2. Cross-Encoder Re-Ranking</h4>
           <p class="text-xs text-slate-500 leading-relaxed">
-            Google's <code class="font-mono text-slate-700">text-embedding-004</code> converts chunks into semantic vectors, stored in an ephemeral ChromaDB collection for isolated, instant retrieval.
+            Stage 1 pulls 20 broad candidate chunks. Stage 2 evaluates full token-level cross-attention via <code class="font-mono text-slate-700">ms-marco-MiniLM-L-6-v2</code> to compress down to the 5 highest-signal chunks.
           </p>
         </div>
 
@@ -505,9 +508,19 @@
           <div class="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center mb-3">
             <i data-lucide="brain-circuit" class="w-4 h-4"></i>
           </div>
-          <h4 class="font-bold text-slate-800 mb-1">3. Gemini RAG Synthesis</h4>
+          <h4 class="font-bold text-slate-800 mb-1">3. Structured Pydantic Output</h4>
           <p class="text-xs text-slate-500 leading-relaxed">
-            Targeted similarity search pulls the exam blueprint: syllabus boundaries, section breakdown, mark distribution, and Bloom's taxonomy to instruct Gemini to craft an authentic test.
+            Gemini is bound to strict Pydantic schemas (<code class="font-mono text-slate-700">MockTestPaper</code>) with Few-Shot prompts to guarantee zero structural hallucinations and structured question outputs.
+          </p>
+        </div>
+
+        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
+          <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center mb-3">
+            <i data-lucide="check-check" class="w-4 h-4"></i>
+          </div>
+          <h4 class="font-bold text-slate-800 mb-1">4. Critic / Verifier Audit</h4>
+          <p class="text-xs text-slate-500 leading-relaxed">
+            An automated audit loop verifies that question marks mathematically sum to the requested total, validates syllabus boundaries, and confirms partial-credit solution rubrics for every question.
           </p>
         </div>
       </div>
@@ -518,8 +531,8 @@
   <!-- Footer -->
   <footer class="bg-white border-t border-slate-200 py-6 text-center text-xs text-slate-400 no-print mt-auto">
     <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-      <p>AI Mock Paper Generator &copy; 2026. Built with FastAPI, LangChain, ChromaDB, and Google Gemini.</p>
-      <p class="font-mono text-[11px] text-slate-500">Ready for Render ASGI Deployment</p>
+      <p>AI Mock Paper Generator &copy; 2026. Built with FastAPI, LangChain, Qdrant, Celery, and Google Gemini.</p>
+      <p class="font-mono text-[11px] text-slate-500">Production ASGI Deployment</p>
     </div>
   </footer>
 

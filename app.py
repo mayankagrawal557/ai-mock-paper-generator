@@ -66,6 +66,84 @@ STAGING_BASE_DIR = os.getenv("STAGING_DIR", os.path.join(os.path.expanduser("~")
 os.makedirs(STAGING_BASE_DIR, exist_ok=True)
 
 
+# In-memory background task registry (graceful fallback when Redis is offline)
+IN_MEMORY_JOBS: dict[str, dict[str, Any]] = {}
+
+
+def execute_in_memory_task(
+    task_id: str,
+    task_dir: str,
+    syllabus_filenames: List[str],
+    pyq_filenames: List[str],
+    exam_name: str,
+    total_marks: int,
+    duration_minutes: int,
+    difficulty: str,
+    include_solutions: bool,
+    model_name: str
+):
+    """Fallback async worker when running on standalone hosts without Redis."""
+    from ai_engine import run_rag_pipeline
+    import shutil
+
+    def progress_callback(stage: str, percentage: int):
+        IN_MEMORY_JOBS[task_id] = {
+            "task_id": task_id,
+            "status": "PROGRESS",
+            "percentage": percentage,
+            "stage": stage
+        }
+
+    try:
+        progress_callback("Loading documents from staging area...", 10)
+        syllabus_files = []
+        for fname in syllabus_filenames:
+            p = os.path.join(task_dir, "syllabus", fname)
+            if os.path.exists(p):
+                with open(p, "rb") as f:
+                    syllabus_files.append((fname, f.read()))
+
+        pyq_files = []
+        for fname in pyq_filenames:
+            p = os.path.join(task_dir, "pyq", fname)
+            if os.path.exists(p):
+                with open(p, "rb") as f:
+                    pyq_files.append((fname, f.read()))
+
+        result = run_rag_pipeline(
+            syllabus_files=syllabus_files,
+            pyq_files=pyq_files,
+            exam_name=exam_name,
+            total_marks=total_marks,
+            duration_minutes=duration_minutes,
+            difficulty=difficulty,
+            include_solutions=include_solutions,
+            model_name=model_name,
+            progress_callback=progress_callback
+        )
+        IN_MEMORY_JOBS[task_id] = {
+            "task_id": task_id,
+            "status": "SUCCESS",
+            "percentage": 100,
+            "stage": "Completed",
+            "result": result
+        }
+    except Exception as exc:
+        logger.error(f"In-memory task {task_id} failed: {exc}", exc_info=True)
+        IN_MEMORY_JOBS[task_id] = {
+            "task_id": task_id,
+            "status": "FAILURE",
+            "percentage": 0,
+            "error": str(exc)
+        }
+    finally:
+        try:
+            if os.path.exists(task_dir):
+                shutil.rmtree(task_dir)
+        except Exception:
+            pass
+
+
 def has_valid_api_key() -> bool:
     """Check if a real Gemini API key is configured."""
     key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
@@ -189,8 +267,9 @@ async def submit_paper_generation_job(
             shutil.rmtree(task_dir, ignore_errors=True)
         raise e
 
-    # 5. Dispatch async background task to Celery
+    # 5. Dispatch async background task (Celery or In-Memory fallback)
     try:
+        celery_app.connection().connect()
         generate_mock_paper_task.apply_async(
             kwargs={
                 "task_dir": task_dir,
@@ -207,11 +286,31 @@ async def submit_paper_generation_job(
         )
         logger.info(f"Queued Celery generation task with ID: {task_id}")
     except Exception as dispatch_err:
-        logger.error(f"Failed to dispatch Celery task: {dispatch_err}")
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Task queue backend (Redis) is unreachable. Ensure Redis and Celery worker are running."
+        logger.warning(f"Redis/Celery broker offline ({dispatch_err}). Falling back to native in-memory worker.")
+        import threading
+        IN_MEMORY_JOBS[task_id] = {
+            "task_id": task_id,
+            "status": "PROGRESS",
+            "percentage": 5,
+            "stage": "Job queued in native async worker..."
+        }
+        worker_thread = threading.Thread(
+            target=execute_in_memory_task,
+            args=(
+                task_id,
+                task_dir,
+                staged_syllabus,
+                staged_pyq,
+                exam_name.strip() or "Mock Examination",
+                total_marks if total_marks > 0 else 100,
+                duration_minutes if duration_minutes > 0 else 180,
+                difficulty,
+                include_solutions,
+                model_name
+            ),
+            daemon=True
         )
+        worker_thread.start()
 
     return JSONResponse(
         status_code=status.HTTP_202_ACCEPTED,
@@ -227,8 +326,13 @@ async def submit_paper_generation_job(
 @app.get("/api/status/{task_id}")
 async def check_generation_task_status(task_id: str):
     """
-    Polling endpoint: Returns the real-time execution state of a queued Celery job.
+    Polling endpoint: Returns the real-time execution state of a queued Celery or In-Memory job.
     """
+    # 1. Check in-memory job registry first (fastest & handles standalone Render web service)
+    if task_id in IN_MEMORY_JOBS:
+        return IN_MEMORY_JOBS[task_id]
+
+    # 2. Check Celery task result from Redis
     try:
         task_result = AsyncResult(task_id, app=celery_app)
         state = task_result.state
